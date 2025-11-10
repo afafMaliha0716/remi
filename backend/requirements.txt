@@ -1,3 +1,7 @@
 fastapi
 uvicorn[standard]
 google-generativeai
+python-dotenv
+asyncpg
+sqlmodel
+supabase
