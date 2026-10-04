@@ -1,0 +1,18 @@
+# Local PostgreSQL for development.
+#   docker compose up -d
+# then set in backend/.env:
+#   DATABASE_URL=postgresql://remi:remi@localhost:5432/remi
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: remi
+      POSTGRES_PASSWORD: remi
+      POSTGRES_DB: remi
+    ports:
+      - "5432:5432"
+    volumes:
+      - remi-data:/var/lib/postgresql/data
+
+volumes:
+  remi-data:
