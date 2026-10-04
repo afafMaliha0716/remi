@@ -17,22 +17,56 @@ export interface Task {
   estimated_minutes: number | null;
   due_date: string | null;
   skip_count: number;
-  created_at: string;
-  completed_at: string | null;
   steps: Step[];
   score: number;
   reasons: string[];
   suggest_breakdown: boolean;
+  xp_awarded: number;
 }
 
-export interface Stats {
-  open_count: number;
-  completed_today: number;
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  earned: boolean;
+}
+
+export interface Profile {
+  xp: number;
+  level: number;
+  level_title: string;
+  xp_into_level: number;
+  xp_for_next: number;
   streak_days: number;
+  completed_today: number;
+  daily_goal: number;
+  open_count: number;
+  focus_minutes: number;
+  reflected_today: boolean;
+  badges: Badge[];
 }
 
-/** What the user tells Remi about this moment. */
-export interface Moment {
-  energy: Energy | null;
-  minutes: number | null;
+export interface Reflection {
+  day: string;
+  friction: number;
+  note: string;
+  xp_awarded: number;
 }
+
+export interface ChatMessage {
+  id: number;
+  role: "user" | "remi";
+  content: string;
+  created_at: string;
+}
+
+export interface CoachResponse {
+  coach: string;
+  mode: string;
+  reply: ChatMessage;
+  suggested_task_id: number | null;
+}
+
+export type CoachMode = "plan_day" | "overwhelm" | "lost_item";
+
+export type Tab = "today" | "coach" | "focus" | "me";

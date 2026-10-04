@@ -1,4 +1,12 @@
-import type { Moment, Stats, Step, Task } from "./types";
+import type {
+  ChatMessage,
+  CoachMode,
+  CoachResponse,
+  Profile,
+  Reflection,
+  Step,
+  Task,
+} from "./types";
 
 const BASE: string = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -18,27 +26,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.status === 204 ? (undefined as T) : response.json();
 }
 
-const post = <T>(path: string, body?: unknown) =>
-  request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined });
+const send = <T>(method: string, path: string, body?: unknown) =>
+  request<T>(path, { method, body: body ? JSON.stringify(body) : undefined });
 
-function momentQuery(moment: Moment): string {
-  const params = new URLSearchParams();
-  if (moment.energy) params.set("energy", moment.energy);
-  if (moment.minutes) params.set("minutes", String(moment.minutes));
-  const query = params.toString();
-  return query ? `?${query}` : "";
+/** The user's wall-clock time without a zone, e.g. 2026-03-04T09:05:00. */
+function localTime(): string {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 19);
 }
 
 export const api = {
-  tasks: (moment: Moment) => request<Task[]>(`/tasks${momentQuery(moment)}`),
-  stats: () => request<Stats>("/stats"),
-  brainDump: (text: string) =>
-    post<{ planner: string; tasks: Task[] }>("/brain-dump", { text }),
-  complete: (id: number) => post<Task>(`/tasks/${id}/complete`),
-  reopen: (id: number) => post<Task>(`/tasks/${id}/reopen`),
-  skip: (id: number) => post<Task>(`/tasks/${id}/skip`),
-  breakDown: (id: number) => post<Task>(`/tasks/${id}/breakdown`),
-  remove: (id: number) => request<void>(`/tasks/${id}`, { method: "DELETE" }),
-  setStep: (id: number, done: boolean) =>
-    request<Step>(`/steps/${id}`, { method: "PATCH", body: JSON.stringify({ done }) }),
+  tasks: () => request<Task[]>("/tasks"),
+  profile: () => request<Profile>("/profile"),
+  brainDump: (text: string) => send<{ tasks: Task[] }>("POST", "/brain-dump", { text }),
+  complete: (id: number) => send<Task>("POST", `/tasks/${id}/complete`),
+  skip: (id: number) => send<Task>("POST", `/tasks/${id}/skip`),
+  breakDown: (id: number) => send<Task>("POST", `/tasks/${id}/breakdown`),
+  remove: (id: number) => send<void>("DELETE", `/tasks/${id}`),
+  setStep: (id: number, done: boolean) => send<Step>("PATCH", `/steps/${id}`, { done }),
+  focus: (minutes: number, taskId: number | null) =>
+    send<{ xp_awarded: number }>("POST", "/focus", { minutes, task_id: taskId }),
+  reflection: () => request<Reflection | null>("/reflections/today"),
+  saveReflection: (friction: number, note: string) =>
+    send<Reflection>("POST", "/reflections", { friction, note }),
+  messages: () => request<ChatMessage[]>("/coach/messages"),
+  clearMessages: () => send<void>("DELETE", "/coach/messages"),
+  coach: (message: string, mode?: CoachMode) =>
+    send<CoachResponse>("POST", "/coach", { message, mode, local_time: localTime() }),
 };

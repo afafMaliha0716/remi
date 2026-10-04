@@ -1,3 +1,5 @@
+import type { Task } from "./types";
+
 /** "25 min" or "1 hr 30 min". */
 export function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -20,10 +22,32 @@ export function formatDue(isoDate: string): string {
   return due.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+export function isOverdue(isoDate: string): boolean {
+  return isoDate < new Date().toLocaleDateString("en-CA");
+}
+
+/** The one-line summary under a task title: "10 min, due tomorrow". */
+export function taskFacts(task: Task): string {
+  return [
+    task.estimated_minutes ? formatMinutes(task.estimated_minutes) : null,
+    task.due_date ? `due ${formatDue(task.due_date)}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
 /** Joins reasons into one sentence: "Due today, quick win and fits your low energy." */
 export function formatReasons(reasons: string[]): string {
   if (reasons.length === 0) return "";
   const parts = reasons.map((r, i) => (i === 0 ? r : r[0].toLowerCase() + r.slice(1)));
   const last = parts.pop()!;
   return (parts.length ? `${parts.join(", ")} and ${last}` : last) + ".";
+}
+
+/** Seconds as "24:59". */
+export function formatClock(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.ceil(totalSeconds));
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
