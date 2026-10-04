@@ -1,108 +1,186 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
-import { BrainDump } from "./components/BrainDump";
-import { MomentPicker } from "./components/MomentPicker";
-import { NextCard } from "./components/NextCard";
-import { TaskList } from "./components/TaskList";
-import type { Moment, Stats, Task } from "./types";
+import { TabBar } from "./components/TabBar";
+import { TaskSheet } from "./components/TaskSheet";
+import { Coach } from "./screens/Coach";
+import { Focus, type FocusResult } from "./screens/Focus";
+import { Me } from "./screens/Me";
+import { Today } from "./screens/Today";
+import type { Profile, Tab, Task } from "./types";
+
+type Theme = "dark" | "light";
+
+function savedTheme(): Theme {
+  try {
+    return localStorage.getItem("remi-theme") === "light" ? "light" : "dark";
+  } catch {
+    return "dark";
+  }
+}
 
 export default function App() {
-  const [tasks, setTasks] = useState<Task[] | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [moment, setMoment] = useState<Moment>({ energy: null, minutes: null });
+  const [tab, setTab] = useState<Tab>("today");
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [focusId, setFocusId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ id: number; text: string; kind: "xp" | "error" } | null>(
+    null,
+  );
+  const [theme, setTheme] = useState<Theme>(savedTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("remi-theme", theme);
+    } catch {
+      // Private browsing: the choice just won't be remembered.
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), toast.kind === "error" ? 5000 : 2200);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const showError = useCallback((text: string) => {
+    setToast({ id: Date.now(), text, kind: "error" });
+  }, []);
+
+  /** Celebrates earned XP, and a level-up when the new profile shows one. */
+  const celebrate = useCallback((xp: number, before: Profile | null, after: Profile) => {
+    if (xp <= 0) return;
+    const leveledUp = before !== null && after.level > before.level;
+    setToast({
+      id: Date.now(),
+      kind: "xp",
+      text: leveledUp ? `Level ${after.level}: ${after.level_title}` : `+${xp} XP`,
+    });
+  }, []);
 
   const refresh = useCallback(async () => {
-    const [nextTasks, nextStats] = await Promise.all([api.tasks(moment), api.stats()]);
+    const [nextTasks, nextProfile] = await Promise.all([api.tasks(), api.profile()]);
     setTasks(nextTasks);
-    setStats(nextStats);
-  }, [moment]);
+    setProfile(nextProfile);
+    return nextProfile;
+  }, []);
 
-  /** Runs an API call, then reloads the list so the ranking stays current. */
+  /** Runs an API call, reloads, and shows any XP it earned. */
   const run = useCallback(
-    async (action?: () => Promise<unknown>) => {
+    async (action?: () => Promise<{ xp_awarded?: number } | unknown>) => {
       setBusy(true);
       try {
-        await action?.();
-        await refresh();
-        setError(null);
+        const result = await action?.();
+        const before = profile;
+        const after = await refresh();
+        const xp = (result as { xp_awarded?: number } | undefined)?.xp_awarded ?? 0;
+        celebrate(xp, before, after);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Something went wrong.");
+        showError(cause instanceof Error ? cause.message : "Something went wrong.");
       } finally {
         setBusy(false);
       }
     },
-    [refresh],
+    [profile, refresh, celebrate, showError],
   );
 
   useEffect(() => {
-    void run();
-  }, [run]);
+    refresh().catch((cause: Error) => showError(cause.message));
+  }, [refresh, showError]);
+
+  const openTask = tasks.find((task) => task.id === openId) ?? null;
+  const focusTask = tasks.find((task) => task.id === focusId) ?? null;
+
+  function startFocus(task: Task) {
+    setFocusId(task.id);
+    setOpenId(null);
+    setTab("focus");
+  }
 
   /** Checks a step off immediately, then saves it. */
   function toggleStep(stepId: number, done: boolean) {
-    setTasks(
-      (current) =>
-        current?.map((task) => ({
-          ...task,
-          steps: task.steps.map((s) => (s.id === stepId ? { ...s, done } : s)),
-        })) ?? null,
+    setTasks((current) =>
+      current.map((task) => ({
+        ...task,
+        steps: task.steps.map((s) => (s.id === stepId ? { ...s, done } : s)),
+      })),
     );
     void run(() => api.setStep(stepId, done));
   }
 
-  const [next, ...later] = tasks ?? [];
+  async function finishFocus({ minutes, task, taskDone }: FocusResult) {
+    await run(async () => {
+      let xp = 0;
+      if (minutes > 0) xp += (await api.focus(minutes, task?.id ?? null)).xp_awarded;
+      if (task && taskDone) xp += (await api.complete(task.id)).xp_awarded;
+      return { xp_awarded: xp };
+    });
+    if (taskDone) setFocusId(null);
+  }
 
   return (
-    <main>
-      <header className="masthead">
-        <img src="/shell.svg" alt="" width="36" height="36" />
-        <h1>Remi</h1>
-        {stats && stats.completed_today > 0 && (
-          <p className="tally">
-            {stats.completed_today} done today
-            {stats.streak_days > 1 && `, ${stats.streak_days}-day streak`}
-          </p>
-        )}
-      </header>
-
-      <BrainDump busy={busy} onSubmit={(text) => run(() => api.brainDump(text))} />
-
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-
-      {tasks !== null && tasks.length === 0 && !error && (
-        <p className="empty">
-          Nothing on your list. Write down whatever's in your head and Remi will turn it
-          into tasks.
-        </p>
-      )}
-
-      {next && (
-        <>
-          <MomentPicker moment={moment} onChange={setMoment} />
-          <NextCard
-            task={next}
+    <div className="app">
+      <main>
+        {tab === "today" && (
+          <Today
+            tasks={tasks}
+            profile={profile}
             busy={busy}
-            onDone={() => run(() => api.complete(next.id))}
-            onSkip={() => run(() => api.skip(next.id))}
-            onBreakDown={() => run(() => api.breakDown(next.id))}
-            onToggleStep={toggleStep}
+            onAdd={(text) => run(() => api.brainDump(text))}
+            onDone={(task) => run(() => api.complete(task.id))}
+            onOpen={(task) => setOpenId(task.id)}
+            onFocus={startFocus}
           />
-        </>
+        )}
+        {tab === "coach" && <Coach tasks={tasks} onFocus={startFocus} onError={showError} />}
+        {/* Focus stays mounted so a running timer survives switching tabs. */}
+        <div hidden={tab !== "focus"}>
+          <Focus
+            key={focusId ?? "none"}
+            tasks={tasks}
+            task={focusTask}
+            onPick={(task) => setFocusId(task?.id ?? null)}
+            onFinish={finishFocus}
+          />
+        </div>
+        {tab === "me" && (
+          <Me
+            profile={profile}
+            theme={theme}
+            onTheme={setTheme}
+            onCheckIn={(friction, note) => run(() => api.saveReflection(friction, note))}
+          />
+        )}
+      </main>
+
+      {toast && (
+        <p key={toast.id} className={`toast ${toast.kind}`} role="status">
+          {toast.text}
+        </p>
       )}
 
-      {later.length > 0 && (
-        <TaskList
-          tasks={later}
-          onDone={(id) => run(() => api.complete(id))}
-          onRemove={(id) => run(() => api.remove(id))}
+      {openTask && (
+        <TaskSheet
+          task={openTask}
+          busy={busy}
+          onClose={() => setOpenId(null)}
+          onFocus={() => startFocus(openTask)}
+          onBreakDown={() => run(() => api.breakDown(openTask.id))}
+          onSkip={() => {
+            setOpenId(null);
+            void run(() => api.skip(openTask.id));
+          }}
+          onRemove={() => {
+            setOpenId(null);
+            void run(() => api.remove(openTask.id));
+          }}
+          onToggleStep={toggleStep}
         />
       )}
-    </main>
+
+      <TabBar tab={tab} onChange={setTab} />
+    </div>
   );
 }
