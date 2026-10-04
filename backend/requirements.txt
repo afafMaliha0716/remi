@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
-google-generativeai
-python-dotenv
-asyncpg
 sqlmodel
-supabase
+pydantic-settings
+psycopg[binary]
+google-genai
