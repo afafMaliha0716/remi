@@ -5,6 +5,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.db import get_session
 from app.main import app
+from app.services.coach import ScriptedCoach, get_coach
 from app.services.planner import HeuristicPlanner, get_planner
 
 
@@ -26,5 +27,6 @@ def client(session):
     app.dependency_overrides[get_session] = lambda: session
     # Tests never call the real model.
     app.dependency_overrides[get_planner] = HeuristicPlanner
+    app.dependency_overrides[get_coach] = ScriptedCoach
     yield TestClient(app)
     app.dependency_overrides.clear()

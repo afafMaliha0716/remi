@@ -11,7 +11,11 @@ def create(client, **body):
 
 
 def test_health_reports_the_active_planner(client):
-    assert client.get("/api/health").json() == {"status": "ok", "planner": "rules"}
+    assert client.get("/api/health").json() == {
+        "status": "ok",
+        "planner": "rules",
+        "coach": "scripted",
+    }
 
 
 def test_create_and_list(client):

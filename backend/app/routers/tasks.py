@@ -1,12 +1,12 @@
 """Task endpoints: CRUD, completion, skipping, breakdown, and "what next"."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlmodel import Session, select
 
 from ..db import get_session
-from ..models import Energy, Status, Step, Task, utcnow
+from ..models import Energy, Status, Step, Task, XpEvent, utcnow
 from ..schemas import (
     BrainDumpRequest,
     BrainDumpResponse,
@@ -17,6 +17,7 @@ from ..schemas import (
     TaskRead,
     TaskUpdate,
 )
+from ..services.gamify import TASK_XP, streak
 from ..services.planner import Planner, get_planner
 from ..services.prioritize import Priority, rank_tasks, score_task
 
@@ -145,11 +146,17 @@ def delete_task(task_id: int, session: Session = Depends(get_session)) -> Respon
 @router.post("/tasks/{task_id}/complete", response_model=TaskRead)
 def complete_task(task_id: int, session: Session = Depends(get_session)) -> TaskRead:
     task = _get_task(task_id, session)
-    task.status = Status.done
-    task.completed_at = utcnow()
+    awarded = 0
+    if task.status is not Status.done:
+        task.status = Status.done
+        task.completed_at = utcnow()
+        awarded = TASK_XP[task.energy]
+        session.add(XpEvent(amount=awarded, reason="task", task_id=task.id))
     for step in task.steps:
         step.done = True
-    return _scored(_save(task, session))
+    read = _scored(_save(task, session))
+    read.xp_awarded = awarded
+    return read
 
 
 @router.post("/tasks/{task_id}/reopen", response_model=TaskRead)
@@ -157,6 +164,9 @@ def reopen_task(task_id: int, session: Session = Depends(get_session)) -> TaskRe
     task = _get_task(task_id, session)
     task.status = Status.todo
     task.completed_at = None
+    # Take back the XP so finishing the same task twice can't be farmed.
+    for event in session.exec(select(XpEvent).where(XpEvent.task_id == task.id)):
+        session.delete(event)
     return _scored(_save(task, session))
 
 
@@ -199,34 +209,24 @@ def update_step(
     return step
 
 
-def _streak(completed_days: set[date], today: date) -> int:
-    """Consecutive days with a completion, ending today or yesterday."""
-    day = today if today in completed_days else today - timedelta(days=1)
-    streak = 0
-    while day in completed_days:
-        streak += 1
-        day -= timedelta(days=1)
-    return streak
-
-
 @router.get("/stats", response_model=Stats)
 def stats(session: Session = Depends(get_session)) -> Stats:
     today = date.today()
     tasks = list(session.exec(select(Task)))
     completed_days = {
-        _local_day(t.completed_at) for t in tasks if t.completed_at is not None
+        local_day(t.completed_at) for t in tasks if t.completed_at is not None
     }
     return Stats(
         open_count=sum(t.status is Status.todo for t in tasks),
         completed_today=sum(
-            t.completed_at is not None and _local_day(t.completed_at) == today
+            t.completed_at is not None and local_day(t.completed_at) == today
             for t in tasks
         ),
-        streak_days=_streak(completed_days, today),
+        streak_days=streak(completed_days, today),
     )
 
 
-def _local_day(moment: datetime) -> date:
+def local_day(moment: datetime) -> date:
     """Convert a stored UTC timestamp to the server's local calendar day."""
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=timezone.utc)

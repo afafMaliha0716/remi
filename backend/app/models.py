@@ -60,3 +60,45 @@ class Step(SQLModel, table=True):
     position: int = 0
 
     task: Task | None = Relationship(back_populates="steps")
+
+
+class XpEvent(SQLModel, table=True):
+    """One award of experience points. A user's XP is the sum of these."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    amount: int
+    reason: str
+    task_id: int | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class FocusSession(SQLModel, table=True):
+    """A finished focus timer."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    task_id: int | None = None
+    minutes: int = Field(ge=1)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class Reflection(SQLModel, table=True):
+    """The end-of-day check-in. One per day."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    day: date = Field(index=True, unique=True)
+    # How hard it was to get started today: 1 (easy) to 5 (very hard).
+    friction: int = Field(ge=1, le=5)
+    note: str = ""
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class ChatRole(str, Enum):
+    user = "user"
+    remi = "remi"
+
+
+class ChatMessage(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    role: ChatRole
+    content: str
+    created_at: datetime = Field(default_factory=utcnow)

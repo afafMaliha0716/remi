@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db import create_db_and_tables
-from .routers import tasks
+from .routers import coach, profile, tasks
+from .services.coach import get_coach
 from .services.planner import get_planner
 
 
@@ -19,7 +20,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Remi API",
-    description="Turns brain dumps into prioritized, bite-sized tasks.",
+    description="An AI coach that turns ADHD overwhelm into one small next step.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -32,8 +33,10 @@ app.add_middleware(
 )
 
 app.include_router(tasks.router)
+app.include_router(profile.router)
+app.include_router(coach.router)
 
 
 @app.get("/api/health", tags=["meta"])
 def health() -> dict[str, str]:
-    return {"status": "ok", "planner": get_planner().name}
+    return {"status": "ok", "planner": get_planner().name, "coach": get_coach().name}
