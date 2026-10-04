@@ -19,3 +19,7 @@ node_modules/
 .DS_Store
 desktop.ini
 Thumbs.db
+
+# Local databases
+*.db
+*.sqlite3
