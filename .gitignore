@@ -1,17 +1,21 @@
-# Environments
+# Environment files
 .env
-frontend/.env
-backend/.env
-
-# Dependencies
-/node_modules
-/backend/venv
+.env.*
+!.env.example
 
 # Python
+venv/
+.venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+.pytest_cache/
 
-# VSCode
+# Node
+node_modules/
+
+# Editors and OS
 .vscode/
+.idea/
+.DS_Store
+desktop.ini
+Thumbs.db
