@@ -1,0 +1,394 @@
+/* Remi's palette comes from its shell mascot and the shore it washed up on:
+   sea-glass background, deep-water ink, shell pink, tide teal. */
+:root {
+  --seaglass: #e8f1ef;
+  --foam: #fbfdfc;
+  --ink: #1f2a44;
+  --ink-soft: #56607a;
+  --tide: #23707a;
+  --tide-deep: #185861;
+  --shell: #f4b6c2;
+  --shell-pale: #fce9ed;
+  --line: #cfdedb;
+
+  --display: "Bricolage Grotesque", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--seaglass);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 38rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 5rem;
+}
+
+h1,
+h2 {
+  font-family: var(--display);
+  margin: 0;
+  line-height: 1.1;
+}
+
+button,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--tide);
+  outline-offset: 2px;
+}
+
+/* Masthead */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.75rem;
+}
+
+.masthead h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.tally {
+  margin: 0 0 0 auto;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+/* Brain dump */
+
+.dump label {
+  display: block;
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.dump textarea {
+  display: block;
+  width: 100%;
+  resize: vertical;
+  padding: 0.9rem 1rem;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--foam);
+  line-height: 1.5;
+}
+
+.dump textarea::placeholder {
+  color: #7d8799;
+}
+
+.dump .button {
+  margin-top: 0.75rem;
+}
+
+/* Buttons */
+
+.button {
+  padding: 0.65rem 1.15rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: rgb(31 42 68 / 0.07);
+}
+
+.button.primary {
+  background: var(--tide);
+  border-color: var(--tide);
+  color: #fff;
+}
+
+.button.primary:hover:not(:disabled) {
+  background: var(--tide-deep);
+  border-color: var(--tide-deep);
+}
+
+.button.quiet {
+  border-color: transparent;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Energy and time */
+
+.moment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+  margin: 2.5rem 0 1rem;
+}
+
+.moment fieldset {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.moment legend {
+  float: left;
+  padding: 0;
+  margin-right: 0.3rem;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.chip {
+  padding: 0.3rem 0.8rem;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--foam);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* The next task: the one loud thing on the page */
+
+.next {
+  position: relative;
+  padding: 1.75rem 1.75rem 1.5rem;
+  border-radius: 22px;
+  background: var(--shell-pale);
+  border: 1.5px solid var(--shell);
+  overflow: hidden;
+}
+
+/* Shell ridges fanning out from the corner. */
+.next::after {
+  content: "";
+  position: absolute;
+  right: -5rem;
+  bottom: -5rem;
+  width: 13rem;
+  height: 13rem;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgb(244 182 194 / 0.55) 0deg 7deg,
+    transparent 7deg 14deg
+  );
+  pointer-events: none;
+}
+
+.next > * {
+  position: relative;
+  z-index: 1;
+}
+
+.next-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--tide-deep);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.next h2 {
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.next-facts {
+  margin: 0.6rem 0 0;
+  color: var(--ink-soft);
+}
+
+.next-why {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+}
+
+.steps {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  counter-increment: step;
+  border-top: 1px solid rgb(31 42 68 / 0.12);
+}
+
+.steps label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  padding: 0.55rem 0;
+  cursor: pointer;
+}
+
+.steps label span::before {
+  content: counter(step) ". ";
+  color: var(--ink-soft);
+}
+
+.steps input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--tide);
+  flex: none;
+  translate: 0 0.12rem;
+}
+
+.steps input:checked + span {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+}
+
+.steps .current span {
+  font-weight: 700;
+}
+
+.next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+/* Everything else */
+
+.later {
+  margin-top: 2.5rem;
+}
+
+.later h2 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 0.25rem;
+}
+
+.later ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.later li {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.later-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.later-title {
+  display: block;
+}
+
+.later-facts {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.check {
+  flex: none;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.check:hover {
+  background: var(--tide);
+  border-color: var(--tide);
+}
+
+.remove {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.later li:hover .remove,
+.remove:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .remove {
+    opacity: 0.6;
+  }
+}
+
+/* Messages */
+
+.empty,
+.error {
+  margin: 2.5rem 0 0;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+}
+
+.empty {
+  background: var(--foam);
+  color: var(--ink-soft);
+}
+
+.error {
+  background: #fff1e6;
+  border: 1.5px solid #e9a15f;
+}
+
+@media (max-width: 30rem) {
+  .next {
+    padding: 1.35rem 1.25rem 1.25rem;
+  }
+}
